@@ -160,7 +160,11 @@ impl<C: Contribution, N: NodeId + DeserializeOwned + 'static> Hydrabadger<C, N> 
             batch_rx: Arc::new(Mutex::new(Some(batch_rx))),
         };
 
+        info!("我第一个走到这里了");
+
         *hdb.handler.lock() = Some(Handler::new(hdb.clone(), peer_internal_rx, batch_tx));
+
+        info!("我第二个走到这里了");
 
         hdb
     }

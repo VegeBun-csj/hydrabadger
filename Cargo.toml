@@ -18,6 +18,7 @@ path = "src/bin/peer_node.rs"
 exit_upon_epoch_1000 = []
 # Disables SIMD in reed-solomon-erasure, which currently doesn't work on Android.
 no-simd = ["hbbft/no-simd"]
+# no-simd = ["hbbft/simd-accel"]
 
 
 [dependencies]
@@ -53,7 +54,9 @@ parking_lot = "0.6"
 clear_on_drop = "0.2"
 
 [dependencies.hbbft]
-version = "0.1"
+version = "0.1.0"
+# git = "https://github.com/poanetwork/hbbft.git"
+# branch = "master"
 
 [profile.release]
 debug = true

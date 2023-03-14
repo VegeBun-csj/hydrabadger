@@ -166,6 +166,7 @@ fn main() {
         cfg.output_extra_delay_ms = oed.parse().expect("Invalid output extra delay.");
     }
 
+    // 这里开始将所有的配置注入到一个Hydrabadger实例
     let hb = Hydrabadger::new(bind_address, cfg, Uid::new());
 
     let gen_txn = |txn_gen_count, txn_gen_bytes| {
