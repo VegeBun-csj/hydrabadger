@@ -30,6 +30,8 @@ use tokio::{
     timer::{Delay, Interval},
 };
 
+use crate::Blockchain;
+
 // The number of random transactions to generate per interval.
 const DEFAULT_TXN_GEN_COUNT: usize = 5;
 // The interval between randomly generated transactions.
@@ -160,11 +162,7 @@ impl<C: Contribution, N: NodeId + DeserializeOwned + 'static> Hydrabadger<C, N> 
             batch_rx: Arc::new(Mutex::new(Some(batch_rx))),
         };
 
-        info!("我第一个走到这里了");
-
         *hdb.handler.lock() = Some(Handler::new(hdb.clone(), peer_internal_rx, batch_tx));
-
-        info!("我第二个走到这里了");
 
         hdb
     }
@@ -429,6 +427,7 @@ impl<C: Contribution, N: NodeId + DeserializeOwned + 'static> Hydrabadger<C, N> 
                     let hdb = self.clone();
 
                     if let StateDsct::Validator = hdb.state_dsct_stale() {
+                        // ----------------------------------------------------------------
                         info!(
                             "Generating and inputting {} random transactions...",
                             self.inner.config.txn_gen_count
@@ -439,9 +438,19 @@ impl<C: Contribution, N: NodeId + DeserializeOwned + 'static> Hydrabadger<C, N> 
                             self.inner.config.txn_gen_bytes,
                         );
 
+/*                         let mut chain = Blockchain::new().expect("create blockchain failed");
+                        chain.add_block("1.5HD->Bob").unwrap();
+                        info!(
+                            "Generating Block" {} "with block hash",
+                            chain.len() - 1,
+                        ); */
+
+                        // ----------------------------------------------------------------
+
                         hdb.send_internal(InternalMessage::hb_contribution(
                             hdb.inner.nid.clone(),
                             OutAddr(*hdb.inner.addr),
+                            // contribution是一个泛型，可以是任何类型的数据，比如具体的交易等等
                             txns,
                         ));
                     }
