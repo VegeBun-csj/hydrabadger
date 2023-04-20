@@ -10,8 +10,9 @@ use hbbft::{
     crypto::{PublicKey, SecretKey},
     sync_key_gen::{Ack, AckOutcome, Part, PartOutcome, SyncKeyGen},
 };
-use rand::{self, FromEntropy};
+use rand::{self, SeedableRng};
 use std::collections::BTreeMap;
+use std::sync::Arc;
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub enum InstanceId {
@@ -63,7 +64,7 @@ pub(super) enum State<N> {
     Generating {
         sync_key_gen: Option<SyncKeyGen<N>>,
         public_key: Option<PublicKey>,
-        public_keys: BTreeMap<N, PublicKey>,
+        public_keys: Arc<BTreeMap<N, PublicKey>>,
         part_count: usize,
         ack_count: usize,
     },
@@ -106,7 +107,7 @@ fn handle_queued_acks<C: Contribution, N: NodeId>(
         debug!("   Part count: {}", part_count);
         debug!("   Ack count: {}", ack_count);
 
-        while let Some((nid, ack)) = ack_queue.try_pop() {
+        while let Some((nid, ack)) = ack_queue.pop() {
             handle_ack(&nid, ack, ack_count, sync_key_gen);
         }
     }
@@ -180,7 +181,8 @@ impl<N: NodeId> Machine<N> {
                 // let threshold = config.keygen_peer_count / 3;
                 let threshold = peers.count_validators() / 3;
 
-                let mut public_keys: BTreeMap<N, PublicKey> = peers
+                let mut public_keys: BTreeMap<N, PublicKey> = 
+                    peers
                     .validators()
                     .map(|p| p.pub_info().map(|(nid, _, pk)| (nid.clone(), *pk)).unwrap())
                     .collect();
@@ -193,7 +195,7 @@ impl<N: NodeId> Machine<N> {
                 let (mut sync_key_gen, opt_part) = SyncKeyGen::new(
                     local_nid.clone(),
                     local_sk,
-                    public_keys.clone(),
+                    Arc::new(public_keys.clone()),
                     threshold,
                     &mut rng,
                 )
@@ -218,7 +220,7 @@ impl<N: NodeId> Machine<N> {
                 State::Generating {
                     sync_key_gen: Some(sync_key_gen),
                     public_key: Some(pk),
-                    public_keys,
+                    public_keys: Arc::new(public_keys),
                     part_count: 1,
                     ack_count: 0,
                 }
@@ -298,7 +300,7 @@ impl<N: NodeId> Machine<N> {
             } => {
                 // TODO: Move this match block into a function somewhere for re-use:
                 trace!("KEY GENERATION: Handling part from '{:?}'...", src_nid);
-                let mut rng = rand::rngs::OsRng::new().expect("Creating OS Rng has failed");
+                let mut rng = rand::rngs::OsRng;
                 let skg = sync_key_gen.as_mut().unwrap();
                 let ack = match skg.handle_part(src_nid, part, &mut rng) {
                     Ok(PartOutcome::Valid(Some(ack))) => ack,

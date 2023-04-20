@@ -15,7 +15,7 @@ use hbbft::{
     sync_key_gen::Ack,
     NetworkInfo,
 };
-use rand::{rngs::StdRng, FromEntropy};
+use rand::{rngs::StdRng, SeedableRng};
 use std::sync::{
     atomic::{AtomicUsize, Ordering},
     Arc,
@@ -64,7 +64,8 @@ impl From<usize> for StateDsct {
 }
 
 /// The current hydrabadger state.
-//
+//  这里定义了当前hbbft节点的状态
+//TODO: 其实这里可以把这些状态都定义为区块链上的状态，这里🈯知识定义了一些validator状态，后续这里还可以定义一些交易状态， 比如账户，或者具体的业务状态
 pub enum State<C: Contribution, N: NodeId> {
     Disconnected {},
     DeterminingNetworkState {
@@ -86,6 +87,7 @@ pub enum State<C: Contribution, N: NodeId> {
 
 impl<C: Contribution, N: NodeId> State<C, N> {
     /// Returns the state discriminant.
+    /// 状态判断
     pub(super) fn discriminant(&self) -> StateDsct {
         match self {
             State::Disconnected { .. } => StateDsct::Disconnected,
@@ -225,12 +227,12 @@ impl<C: Contribution, N: NodeId> StateMachine<C, N> {
                 {
                     // TODO: Consolidate or remove:
                     let pk_set = dhb.netinfo().public_key_set();
-                    let pk_map = dhb.netinfo().public_key_map();
+                    // let pk_map = dhb.netinfo().public_key_map();
                     info!("");
                     info!("");
                     info!("PUBLIC KEY: {:?}", pk_set.public_key());
                     info!("PUBLIC KEY SET: \n{:?}", pk_set);
-                    info!("PUBLIC KEY MAP: \n{:?}", pk_map);
+                    // info!("PUBLIC KEY MAP: \n{:?}", pk_map);
                     info!("");
                     info!("");
                 }
@@ -277,7 +279,8 @@ impl<C: Contribution, N: NodeId> StateMachine<C, N> {
 
                 assert!(peers.count_validators() >= cfg.keygen_peer_count);
 
-                let mut node_ids: BTreeMap<N, PublicKey> = peers
+                let mut node_ids: BTreeMap<N, PublicKey> =
+                    peers
                     .validators()
                     .map(|p| {
                         (
@@ -287,12 +290,13 @@ impl<C: Contribution, N: NodeId> StateMachine<C, N> {
                     })
                     .collect();
                 node_ids.insert(local_nid.clone(), local_sk.public_key());
+                let nids = node_ids.keys();
 
-                let netinfo = NetworkInfo::new(local_nid, sk_share, pk_set, local_sk, node_ids);
+                let netinfo = NetworkInfo::new(local_nid, sk_share, pk_set, nids);
 
                 let dhb = DynamicHoneyBadger::builder()
                     .era(cfg.start_epoch)
-                    .build(netinfo);
+                    .build(netinfo, local_sk, Arc::new(node_ids.clone()));
 
                 info!("");
                 info!("== HONEY BADGER INITIALIZED ==");
@@ -301,12 +305,12 @@ impl<C: Contribution, N: NodeId> StateMachine<C, N> {
                 {
                     // TODO: Consolidate or remove:
                     let pk_set = dhb.netinfo().public_key_set();
-                    let pk_map = dhb.netinfo().public_key_map();
+                    // let pk_map = dhb.netinfo().public_key_map();
                     info!("");
                     info!("");
                     info!("PUBLIC KEY: {:?}", pk_set.public_key());
                     info!("PUBLIC KEY SET: \n{:?}", pk_set);
-                    info!("PUBLIC KEY MAP: \n{:?}", pk_map);
+                    // info!("PUBLIC KEY MAP: \n{:?}", pk_map);
                     info!("");
                     info!("");
                 }
@@ -420,8 +424,8 @@ impl<C: Contribution, N: NodeId> StateMachine<C, N> {
             State::Observer { ref dhb } | State::Validator { ref dhb } => {
                 // FIXME: Ensure that `peer_info` matches `NetworkInfo` from HB.
                 let pk_set = dhb.as_ref().unwrap().netinfo().public_key_set().clone();
-                let pk_map = dhb.as_ref().unwrap().netinfo().public_key_map().clone();
-                NetworkState::Active((peer_infos, pk_set, pk_map))
+                // let pk_map = dhb.as_ref().unwrap().netinfo().public_key_map().clone();
+                NetworkState::Active((peer_infos, pk_set))
             }
             _ => NetworkState::Unknown(peer_infos),
         }

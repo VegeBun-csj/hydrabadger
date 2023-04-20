@@ -182,3 +182,11 @@ fn main() {
     //     Err(err) => println!("Error: {}", err),
     // }
 }
+
+
+
+/* 
+
+这个例子主要是介绍了DHB的用法，没有涉及broadcast，aba，subset的调用
+
+*/

@@ -88,6 +88,7 @@ use tokio::{
     prelude::*,
 };
 use uuid::Uuid;
+use std::sync::Arc;
 
 pub use crate::blockchain::{Blockchain, MiningError};
 pub use crate::hydrabadger::{Config, Hydrabadger, HydrabadgerWeak};
@@ -227,7 +228,7 @@ pub struct NetworkNodeInfo<N> {
 type ActiveNetworkInfo<N> = (
     Vec<NetworkNodeInfo<N>>,
     PublicKeySet,
-    BTreeMap<N, PublicKey>,
+    // BTreeMap<N, PublicKey>,
 );
 
 /// The current state of the network.
@@ -236,7 +237,7 @@ pub enum NetworkState<N: Ord> {
     None,
     Unknown(Vec<NetworkNodeInfo<N>>),
     AwaitingMorePeersForKeyGeneration(Vec<NetworkNodeInfo<N>>),
-    GeneratingKeys(Vec<NetworkNodeInfo<N>>, BTreeMap<N, PublicKey>),
+    GeneratingKeys(Vec<NetworkNodeInfo<N>>, Arc<BTreeMap<N, PublicKey>>),
     Active(ActiveNetworkInfo<N>),
 }
 
@@ -244,6 +245,7 @@ pub enum NetworkState<N: Ord> {
 ///
 /// [`Message`](enum.WireMessageKind.html#variant.Message) variants are among
 /// those verified.
+/// 定义了网络中节点之间消息的类型
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum WireMessageKind<C, N: Ord> {
     HelloFromValidator(N, InAddr, PublicKey, NetworkState<N>),
@@ -268,6 +270,7 @@ pub enum WireMessageKind<C, N: Ord> {
 }
 
 /// Messages sent over the network between nodes.
+/// 网络中节点之间传播的消息
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct WireMessage<C, N: Ord> {
     kind: WireMessageKind<C, N>,
